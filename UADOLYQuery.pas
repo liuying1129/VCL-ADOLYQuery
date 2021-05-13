@@ -5,6 +5,9 @@
 {                                                          }
 {                                                          }
 {  新功能：                                                }
+{           1.20210513增加对MySQL的支持.因依赖MyDAC组件,   }
+{              包路径增加***\VCL\MyDAC7.6.11\Source\Delphi7}
+{              否则包编译出错,找不到mydac70.bpl与dac70.bpl }
 {                                                          }
 {                                                          }
 {  功能:                                                   }
@@ -40,10 +43,10 @@ interface
 uses
   Classes, Forms,Inifiles,SysUtils{StringReplace}, 
   Buttons, ADODB,Controls, ExtCtrls,DB,StrUtils,
-  ComCtrls{TDateTimePicker}, StdCtrls,Windows{SetWindowLong};
+  ComCtrls{TDateTimePicker}, StdCtrls,Windows, DBAccess, MyAccess{SetWindowLong};
 
 type TArFieldType = array of TFieldType;
-     TDataBaseType = (dbtMSSQL,dbtOracle,dbtAccess);
+     TDataBaseType = (dbtMSSQL,dbtOracle,dbtAccess,dbtMySQL);
 
 type
   TfrmADOLYQuery = class(TForm)
@@ -77,6 +80,7 @@ type
   public
     { Public declarations }
     pConnection:TADOConnection;
+    pMyConnection:TMyConnection;
     pSelectString:STRING;
     pResult:boolean;
     pResultSelect:string;
@@ -88,11 +92,13 @@ type
   private
     { Private declarations }
     FConnection:TADOConnection;
+    FMyConnection:TMyConnection;
     FSelectString:STRING;
     FResultSelect:string;
     ffrmLYQuery:TfrmADOLYQuery;
     FDataBaseType:TDataBaseType;
     procedure FSetConnection(value:TADOConnection);
+    procedure FSetMyConnection(value:TMyConnection);
     procedure FSetSelectString(value:string);
     procedure FSetDataBaseType(value:TDataBaseType);
   protected
@@ -106,6 +112,7 @@ type
   published
     { Published declarations }
     property Connection:TADOConnection read FConnection write FSetConnection;
+    property MyConnection:TMyConnection read FMyConnection write FSetMyConnection;
     property SelectString:string read FSelectString write FSetSelectString;
     property DataBaseType:TDataBaseType read FDataBaseType write FSetDataBaseType;
   end;
@@ -175,6 +182,7 @@ function TfrmADOLYQuery.GetFieldNames(const SelectString:string):TStrings;//取得
 var
   tmpSelString:string;
   adotemp11:tadoquery;
+  adotemp22:TMyQuery;
   a,b:string;//无实际用处
 begin
   Result := TStringList.Create;
@@ -182,20 +190,41 @@ begin
   tmpSelString:=GetSelectPart(SelectString,a,b);
   tmpSelString:=tmpSelString+' 1=0 ';
   
-  adotemp11:=tadoquery.Create(nil);
-  adotemp11.Connection:=pConnection;
-  adotemp11.Close;
-  adotemp11.SQL.Clear;
-  adotemp11.SQL.Text:=tmpSelString;
-  try
-     adotemp11.Open;//只有打开的情况下才能检测到字段
-  except
-     raise Exception.Create('请检查您的SQL语句!');
-     adotemp11.Free;
-     exit;
+  if Assigned(pConnection) then
+  begin
+    adotemp11:=tadoquery.Create(nil);
+    adotemp11.Connection:=pConnection;
+    adotemp11.Close;
+    adotemp11.SQL.Clear;
+    adotemp11.SQL.Text:=tmpSelString;
+    try
+       adotemp11.Open;//只有打开的情况下才能检测到字段
+    except
+       raise Exception.Create('请检查您的SQL语句!');
+       adotemp11.Free;
+       exit;
+    end;
+    adotemp11.Fields.GetFieldNames(Result);
+    adotemp11.Free;
   end;
-  adotemp11.Fields.GetFieldNames(Result);
-  adotemp11.Free;
+  
+  if Assigned(pMyConnection) then
+  begin
+    adotemp22:=TMyQuery.Create(nil);
+    adotemp22.Connection:=pMyConnection;
+    adotemp22.Close;
+    adotemp22.SQL.Clear;
+    adotemp22.SQL.Text:=tmpSelString;
+    try
+       adotemp22.Open;//只有打开的情况下才能检测到字段
+    except
+       raise Exception.Create('请检查您的SQL语句!');
+       adotemp22.Free;
+       exit;
+    end;
+    adotemp22.Fields.GetFieldNames(Result);
+    adotemp22.Free;
+  end;
 end;
 
 function TfrmADOLYQuery.GetFieldType(
@@ -203,31 +232,58 @@ function TfrmADOLYQuery.GetFieldType(
 var
   tmpSelString:string;
   adotemp11:tadoquery;
+  adotemp22:TMyQuery;
   i:integer;
   a,b:string;//无实际用处
 begin
   tmpSelString:=GetSelectPart(SelectString,a,b);
   tmpSelString:=tmpSelString+' 1=0 ';
 
-  adotemp11:=tadoquery.Create(nil);
-  adotemp11.Connection:=pConnection;
-  adotemp11.Close;
-  adotemp11.SQL.Clear;
-  adotemp11.SQL.Text:=tmpSelString;
-  try
-     adotemp11.Open;//只有打开的情况下才能检测到字段
-  except
-     raise Exception.Create('请检查您的SQL语句!');
-     adotemp11.Free;
-     Result:=nil;
-     exit;
-  end;
-  setlength(Result,adotemp11.FieldCount);
-  for i :=0  to adotemp11.FieldCount-1 do
+  if Assigned(pConnection) then
   begin
-    Result[i]:=adotemp11.Fields[i].datatype;
+    adotemp11:=tadoquery.Create(nil);
+    adotemp11.Connection:=pConnection;
+    adotemp11.Close;
+    adotemp11.SQL.Clear;
+    adotemp11.SQL.Text:=tmpSelString;
+    try
+       adotemp11.Open;//只有打开的情况下才能检测到字段
+    except
+       raise Exception.Create('请检查您的SQL语句!');
+       adotemp11.Free;
+       Result:=nil;
+       exit;
+    end;
+    setlength(Result,adotemp11.FieldCount);
+    for i :=0  to adotemp11.FieldCount-1 do
+    begin
+      Result[i]:=adotemp11.Fields[i].datatype;
+    end;
+    adotemp11.Free;
   end;
-  adotemp11.Free;
+
+  if Assigned(pMyConnection) then
+  begin
+    adotemp22:=TMyQuery.Create(nil);
+    adotemp22.Connection:=pMyConnection;
+    adotemp22.Close;
+    adotemp22.SQL.Clear;
+    adotemp22.SQL.Text:=tmpSelString;
+    try
+       adotemp22.Open;//只有打开的情况下才能检测到字段
+    except
+       raise Exception.Create('请检查您的SQL语句!');
+       adotemp22.Free;
+       Result:=nil;
+       exit;
+    end;
+    setlength(Result,adotemp22.FieldCount);
+    for i :=0  to adotemp22.FieldCount-1 do
+    begin
+      Result[i]:=adotemp22.Fields[i].datatype;
+    end;
+    adotemp22.Free;
+  end;
 end;
 
 function TfrmADOLYQuery.GetFieldsList(const SelectString:string;const FieldNameList:TStrings):TStrings;//取得字段列表
@@ -235,6 +291,7 @@ var
   sqlstr1,tmpSelString:string;
   j,k,iLen:integer;
   adotemp11:tadoquery;
+  adotemp22:TMyQuery;
   a,b:string;//无实际用处
 
   //给字段加上表名的变量
@@ -273,20 +330,41 @@ begin
   tmpSelString:=GetSelectPart(sqlstr1,a,b);
   tmpSelString:=tmpSelString+' 1=0 ';
 
-  adotemp11:=tadoquery.Create(nil);
-  adotemp11.Connection:=pConnection;
-  adotemp11.Close;
-  adotemp11.SQL.Clear;
-  adotemp11.SQL.Text:=tmpSelString;
-  try
-    adotemp11.Open;//只有打开的情况下才能检测到字段
-  except
-    raise Exception.Create('生成字段列表时出错!');
+  if Assigned(pConnection) then
+  begin
+    adotemp11:=tadoquery.Create(nil);
+    adotemp11.Connection:=pConnection;
+    adotemp11.Close;
+    adotemp11.SQL.Clear;
+    adotemp11.SQL.Text:=tmpSelString;
+    try
+      adotemp11.Open;//只有打开的情况下才能检测到字段
+    except
+      raise Exception.Create('生成字段列表时出错!');
+      adotemp11.Free;
+      exit;
+    end;
+    adotemp11.Fields.GetFieldNames(result);
     adotemp11.Free;
-    exit;
   end;
-  adotemp11.Fields.GetFieldNames(result);
-  adotemp11.Free;
+
+  if Assigned(pMyConnection) then
+  begin
+    adotemp22:=TMyQuery.Create(nil);
+    adotemp22.Connection:=pMyConnection;
+    adotemp22.Close;
+    adotemp22.SQL.Clear;
+    adotemp22.SQL.Text:=tmpSelString;
+    try
+      adotemp22.Open;//只有打开的情况下才能检测到字段
+    except
+      raise Exception.Create('生成字段列表时出错!');
+      adotemp22.Free;
+      exit;
+    end;
+    adotemp22.Fields.GetFieldNames(result);
+    adotemp22.Free;
+  end;
 
   //字段属性 add by liuying 20100811
   //1z2y3x:该字符后的串为字段属性串
@@ -368,6 +446,24 @@ begin
       if(ArFieldType[j]=ftString)or(ArFieldType[j]=ftWideString)then//add by liuying 20100825
       begin
         result[j]:='isnull('+result[j]+','''')';
+      end;
+    end;
+  end;
+  //===========================
+
+  //处理MySQL的datetime类型字段
+  if pDataBaseType=dbtMySQL then   
+  begin
+    for j :=0  to result.Count-1 do
+    begin
+      if(ArFieldType[j]=ftDate)or(ArFieldType[j]=ftTime)or(ArFieldType[j]=ftDateTime)then
+      begin
+        if pos('FIELDTYPE1T2S3RFTTIME',uppercase(slFieldNames[j]))>0 then result[j]:='DATE_FORMAT('+result[j]+',''%H:%i:%S'')'
+          else result[j]:='DATE_FORMAT('+result[j]+',''%Y-%m-%d'')';
+      end;
+      if(ArFieldType[j]=ftString)or(ArFieldType[j]=ftWideString)then
+      begin
+        result[j]:='IFNULL('+result[j]+','''')';
       end;
     end;
   end;
@@ -657,6 +753,7 @@ end;
 procedure TfrmADOLYQuery.BitBtnCommQryClick(Sender: TObject);
 var
   ADOTEMP11:TADOQUERY;
+  ADOTEMP22:TMyQUERY;
   tmpSelString:string;
   a,b:string;//无实际用处
   i,j:integer;
@@ -679,21 +776,39 @@ begin
     //========================================
   end;
 
-  ADOTEMP11:=tadoquery.Create(nil);
-  ADOTEMP11.Connection:=pConnection;
-  ADOTEMP11.Close;
-  ADOTEMP11.SQL.Clear;
-
   tmpSelString:=GetSelectPart(pSelectString,a,b);
   tmpSelString:=tmpSelString+' 1=0 ';
-  ADOTEMP11.SQL.Text:=tmpSelString;
 
-  try
-    ADOTEMP11.Open;
-    pResult:=true;
-  finally
-    ADOTEMP11.Free;
+  if Assigned(pConnection) then
+  begin
+    ADOTEMP11:=tadoquery.Create(nil);
+    ADOTEMP11.Connection:=pConnection;
+    ADOTEMP11.Close;
+    ADOTEMP11.SQL.Clear;
+    ADOTEMP11.SQL.Text:=tmpSelString;
+    try
+      ADOTEMP11.Open;
+      pResult:=true;
+    finally
+      ADOTEMP11.Free;
+    end;
   end;
+  
+  if Assigned(pMyConnection) then
+  begin
+    ADOTEMP22:=TMyQUERY.Create(nil);
+    ADOTEMP22.Connection:=pMyConnection;
+    ADOTEMP22.Close;
+    ADOTEMP22.SQL.Clear;
+    ADOTEMP22.SQL.Text:=tmpSelString;
+    try
+      ADOTEMP22.Open;
+      pResult:=true;
+    finally
+      ADOTEMP22.Free;
+    end;
+  end;
+
   Close;
 end;
 
@@ -722,7 +837,8 @@ begin
   slFieldNames.Free;
   slFieldsList.Free;
   pConnection.Free;
-  
+  pMyConnection.Free;
+
   //==========保存查询条件====================================================//
   if (csDesigning in ComponentState) then exit;
   
@@ -774,7 +890,7 @@ end;
 
 function TADOLYQuery.Execute: boolean;
 begin
-  if fConnection=nil then
+  if (fConnection=nil)and(fMyConnection=nil) then
   begin
     raise Exception.Create('没有设置连接属性!');  
     result:=false;
@@ -786,10 +902,24 @@ begin
   ffrmLYQuery.pSelectString:=fSelectString;
   ffrmLYQuery.pDataBaseType:=FDataBaseType;
 
-  ffrmLYQuery.pConnection:=tAdoconnection.Create(nil);
-  ffrmLYQuery.pConnection.ConnectionString:=fConnection.ConnectionString;
-  ffrmLYQuery.pConnection.LoginPrompt:=false;
-
+  if Assigned(fConnection) then
+  begin
+    ffrmLYQuery.pConnection:=tAdoconnection.Create(nil);
+    ffrmLYQuery.pConnection.ConnectionString:=fConnection.ConnectionString;
+    ffrmLYQuery.pConnection.LoginPrompt:=false;
+  end;
+  
+  if Assigned(fMyConnection) then
+  begin
+    ffrmLYQuery.pMyConnection:=TMyConnection.Create(nil);
+    ffrmLYQuery.pMyConnection.Server:=fMyConnection.Server;
+    ffrmLYQuery.pMyConnection.Port:=fMyConnection.Port;
+    ffrmLYQuery.pMyConnection.Database:=fMyConnection.Database;
+    ffrmLYQuery.pMyConnection.Username:=fMyConnection.Username;
+    ffrmLYQuery.pMyConnection.Password:=fMyConnection.Password;
+    ffrmLYQuery.pMyConnection.LoginPrompt:=false;
+  end;
+  
   ffrmLYQuery.ShowModal;
   fResultSelect:=ffrmLYQuery.pResultSelect;
   result:=ffrmLYQuery.pResult;
@@ -800,6 +930,12 @@ procedure TADOLYQuery.FSetConnection(value: TADOConnection);
 begin
   if value=FConnection then exit;
   FConnection:=value;
+end;
+
+procedure TADOLYQuery.FSetMyConnection(value: TMyConnection);
+begin
+  if value=FMyConnection then exit;
+  FMyConnection:=value;
 end;
 
 procedure TADOLYQuery.FSetDataBaseType(value: TDataBaseType);
