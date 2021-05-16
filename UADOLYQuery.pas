@@ -917,7 +917,7 @@ begin
     ffrmLYQuery.pMyConnection.Database:=fMyConnection.Database;
     ffrmLYQuery.pMyConnection.Username:=fMyConnection.Username;
     ffrmLYQuery.pMyConnection.Password:=fMyConnection.Password;
-    ffrmLYQuery.pMyConnection.Options.Charset:='gb2312';
+    ffrmLYQuery.pMyConnection.Options.Charset:=fMyConnection.Options.Charset;//20210516
     ffrmLYQuery.pMyConnection.LoginPrompt:=false;
   end;
   
