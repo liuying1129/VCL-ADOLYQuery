@@ -43,7 +43,7 @@ interface
 uses
   Classes, Forms,Inifiles,SysUtils{StringReplace}, 
   Buttons, ADODB,Controls, ExtCtrls,DB,StrUtils,
-  ComCtrls{TDateTimePicker}, StdCtrls,Windows, DBAccess, MyAccess{SetWindowLong};
+  ComCtrls{TDateTimePicker}, StdCtrls,Windows{SetWindowLong}, DBAccess, MyAccess;
 
 type TArFieldType = array of TFieldType;
      TDataBaseType = (dbtMSSQL,dbtOracle,dbtAccess,dbtMySQL);
@@ -207,7 +207,7 @@ begin
     adotemp11.Fields.GetFieldNames(Result);
     adotemp11.Free;
   end;
-  
+
   if Assigned(pMyConnection) then
   begin
     adotemp22:=TMyQuery.Create(nil);
@@ -917,6 +917,7 @@ begin
     ffrmLYQuery.pMyConnection.Database:=fMyConnection.Database;
     ffrmLYQuery.pMyConnection.Username:=fMyConnection.Username;
     ffrmLYQuery.pMyConnection.Password:=fMyConnection.Password;
+    ffrmLYQuery.pMyConnection.Options.Charset:='gb2312';
     ffrmLYQuery.pMyConnection.LoginPrompt:=false;
   end;
   
