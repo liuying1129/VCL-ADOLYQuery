@@ -5,9 +5,11 @@
 {                                                          }
 {                                                          }
 {  新功能：                                                }
-{           1.20210513增加对MySQL的支持.因依赖MyDAC组件,   }
-{              包路径增加***\VCL\MyDAC7.6.11\Source\Delphi7}
-{              否则包编译出错,找不到mydac70.bpl与dac70.bpl }
+{  1.20210513增加对MySQL、Oracle的支持.因依赖UniDAC组件,   }
+{    包路径增加***\VCL\UniDAC\Source\Delphi7               }
+{              ***\VCL\UniDAC\Source\UniProviders\MySQL    }
+{              ***\VCL\UniDAC\Source\UniProviders\Oracle   }
+{    否则包编译出错,找不到dac70.bpl                        }
 {                                                          }
 {                                                          }
 {  功能:                                                   }
@@ -43,10 +45,11 @@ interface
 uses
   Classes, Forms,Inifiles,SysUtils{StringReplace}, 
   Buttons, ADODB,Controls, ExtCtrls,DB,StrUtils,
-  ComCtrls{TDateTimePicker}, StdCtrls,Windows{SetWindowLong}, DBAccess, MyAccess;
+  ComCtrls{TDateTimePicker}, StdCtrls,Windows{SetWindowLong},
+  DBAccess, Uni, MySQLUniProvider, OracleUniProvider;
 
 type TArFieldType = array of TFieldType;
-     TDataBaseType = (dbtMSSQL,dbtOracle,dbtAccess,dbtMySQL);
+     TDataBaseType = (dbtMSSQL,dbtAccess,dbtDAC);
 
 type
   TfrmADOLYQuery = class(TForm)
@@ -80,7 +83,7 @@ type
   public
     { Public declarations }
     pConnection:TADOConnection;
-    pMyConnection:TMyConnection;
+    pMyConnection:TUniConnection;
     pSelectString:STRING;
     pResult:boolean;
     pResultSelect:string;
@@ -92,13 +95,13 @@ type
   private
     { Private declarations }
     FConnection:TADOConnection;
-    FMyConnection:TMyConnection;
+    FMyConnection:TUniConnection;
     FSelectString:STRING;
     FResultSelect:string;
     ffrmLYQuery:TfrmADOLYQuery;
     FDataBaseType:TDataBaseType;
     procedure FSetConnection(value:TADOConnection);
-    procedure FSetMyConnection(value:TMyConnection);
+    procedure FSetMyConnection(value:TUniConnection);
     procedure FSetSelectString(value:string);
     procedure FSetDataBaseType(value:TDataBaseType);
   protected
@@ -112,7 +115,7 @@ type
   published
     { Published declarations }
     property Connection:TADOConnection read FConnection write FSetConnection;
-    property MyConnection:TMyConnection read FMyConnection write FSetMyConnection;
+    property MyConnection:TUniConnection read FMyConnection write FSetMyConnection;
     property SelectString:string read FSelectString write FSetSelectString;
     property DataBaseType:TDataBaseType read FDataBaseType write FSetDataBaseType;
   end;
@@ -182,7 +185,7 @@ function TfrmADOLYQuery.GetFieldNames(const SelectString:string):TStrings;//取得
 var
   tmpSelString:string;
   adotemp11:tadoquery;
-  adotemp22:TMyQuery;
+  adotemp22:TUniQuery;
   a,b:string;//无实际用处
 begin
   Result := TStringList.Create;
@@ -210,7 +213,7 @@ begin
 
   if Assigned(pMyConnection) then
   begin
-    adotemp22:=TMyQuery.Create(nil);
+    adotemp22:=TUniQuery.Create(nil);
     adotemp22.Connection:=pMyConnection;
     adotemp22.Close;
     adotemp22.SQL.Clear;
@@ -232,7 +235,7 @@ function TfrmADOLYQuery.GetFieldType(
 var
   tmpSelString:string;
   adotemp11:tadoquery;
-  adotemp22:TMyQuery;
+  adotemp22:TUniQuery;
   i:integer;
   a,b:string;//无实际用处
 begin
@@ -264,7 +267,7 @@ begin
 
   if Assigned(pMyConnection) then
   begin
-    adotemp22:=TMyQuery.Create(nil);
+    adotemp22:=TUniQuery.Create(nil);
     adotemp22.Connection:=pMyConnection;
     adotemp22.Close;
     adotemp22.SQL.Clear;
@@ -291,7 +294,7 @@ var
   sqlstr1,tmpSelString:string;
   j,k,iLen:integer;
   adotemp11:tadoquery;
-  adotemp22:TMyQuery;
+  adotemp22:TUniQuery;
   a,b:string;//无实际用处
 
   //给字段加上表名的变量
@@ -350,7 +353,7 @@ begin
 
   if Assigned(pMyConnection) then
   begin
-    adotemp22:=TMyQuery.Create(nil);
+    adotemp22:=TUniQuery.Create(nil);
     adotemp22.Connection:=pMyConnection;
     adotemp22.Close;
     adotemp22.SQL.Clear;
@@ -416,7 +419,7 @@ begin
   //===========================
 
   //处理oracle的datetime类型字段
-  if pDataBaseType=dbtOracle then
+  if Assigned(pMyConnection) and(pMyConnection.ProviderName='Oracle') then
   begin
     for j :=0  to result.Count-1 do
     begin
@@ -452,7 +455,7 @@ begin
   //===========================
 
   //处理MySQL的datetime类型字段
-  if pDataBaseType=dbtMySQL then   
+  if Assigned(pMyConnection) and(pMyConnection.ProviderName='MySQL') then   
   begin
     for j :=0  to result.Count-1 do
     begin
@@ -733,7 +736,7 @@ begin
             sValue:=FormatDateTime('YYYY-MM-DD',TDateTimePicker(TPanel(ScrollBox1.Controls[i]).Controls[j]).Date);
           if(TPanel(ScrollBox1.Controls[i]).Controls[j] is TDateTimePicker)and(TDateTimePicker(TPanel(ScrollBox1.Controls[i]).Controls[j]).Kind=dtkTime)then
             sValue:=FormatDateTime('hh:nn:ss',TDateTimePicker(TPanel(ScrollBox1.Controls[i]).Controls[j]).Time);
-          if((FieldType=ftString)or(FieldType=ftWideString))and(sValue='')and(pDataBaseType=dbtOracle)then//add by liuying 20100825//20130915 ArFieldType[j]->FieldType
+          if((FieldType=ftString)or(FieldType=ftWideString))and(sValue='')and Assigned(pMyConnection) and(pMyConnection.ProviderName='Oracle')then//add by liuying 20100825//20130915 ArFieldType[j]->FieldType
             sValue:='!@#$%';
           if (mathExp=' like ')or(mathExp=' not like ') then sValue:='%'+sValue+'%';
           case FieldType of
@@ -753,7 +756,7 @@ end;
 procedure TfrmADOLYQuery.BitBtnCommQryClick(Sender: TObject);
 var
   ADOTEMP11:TADOQUERY;
-  ADOTEMP22:TMyQUERY;
+  ADOTEMP22:TUniQuery;
   tmpSelString:string;
   a,b:string;//无实际用处
   i,j:integer;
@@ -796,7 +799,7 @@ begin
   
   if Assigned(pMyConnection) then
   begin
-    ADOTEMP22:=TMyQUERY.Create(nil);
+    ADOTEMP22:=TUniQuery.Create(nil);
     ADOTEMP22.Connection:=pMyConnection;
     ADOTEMP22.Close;
     ADOTEMP22.SQL.Clear;
@@ -911,13 +914,14 @@ begin
   
   if Assigned(fMyConnection) then
   begin
-    ffrmLYQuery.pMyConnection:=TMyConnection.Create(nil);
+    ffrmLYQuery.pMyConnection:=TUniConnection.Create(nil);
+    ffrmLYQuery.pMyConnection.ProviderName:=fMyConnection.ProviderName;
     ffrmLYQuery.pMyConnection.Server:=fMyConnection.Server;
     ffrmLYQuery.pMyConnection.Port:=fMyConnection.Port;
     ffrmLYQuery.pMyConnection.Database:=fMyConnection.Database;
     ffrmLYQuery.pMyConnection.Username:=fMyConnection.Username;
     ffrmLYQuery.pMyConnection.Password:=fMyConnection.Password;
-    ffrmLYQuery.pMyConnection.Options.Charset:=fMyConnection.Options.Charset;//20210516
+    ffrmLYQuery.pMyConnection.SpecificOptions.Values['Charset']:=fMyConnection.SpecificOptions.Values['Charset'];//设置编码格式,解决中文乱码问题
     ffrmLYQuery.pMyConnection.LoginPrompt:=false;
   end;
   
@@ -933,7 +937,7 @@ begin
   FConnection:=value;
 end;
 
-procedure TADOLYQuery.FSetMyConnection(value: TMyConnection);
+procedure TADOLYQuery.FSetMyConnection(value: TUniConnection);
 begin
   if value=FMyConnection then exit;
   FMyConnection:=value;
