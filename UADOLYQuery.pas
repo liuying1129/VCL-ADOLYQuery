@@ -921,7 +921,8 @@ begin
     ffrmLYQuery.pMyConnection.Database:=fMyConnection.Database;
     ffrmLYQuery.pMyConnection.Username:=fMyConnection.Username;
     ffrmLYQuery.pMyConnection.Password:=fMyConnection.Password;
-    ffrmLYQuery.pMyConnection.SpecificOptions.Values['Charset']:=fMyConnection.SpecificOptions.Values['Charset'];//设置编码格式,解决中文乱码问题
+    ffrmLYQuery.pMyConnection.SpecificOptions.Values['Charset']:=fMyConnection.SpecificOptions.Values['Charset'];//设置编码格式(GBK),解决中文乱码问题
+    ffrmLYQuery.pMyConnection.SpecificOptions.Values['Direct']:=fMyConnection.SpecificOptions.Values['Direct'];//是否直连Direct=true(该方式不需装客户端)
     ffrmLYQuery.pMyConnection.LoginPrompt:=false;
   end;
   
