@@ -504,6 +504,7 @@ begin
   cmbFieldName.Parent:=Panel;
   cmbFieldName.Width:=109;cmbFieldName.Left:=77;cmbFieldName.Top:=8;
   cmbFieldName.Tag:=2;
+  cmbFieldName.DropDownCount:=20;//默认8,显示的下拉项太少
   cmbFieldName.Items:=slFieldNames;
   cmbFieldName.OnChange:=cmbFieldNameOnChange;
   for i := 0 to cmbFieldName.Items.Count-1 do//add by liuying 20100821
